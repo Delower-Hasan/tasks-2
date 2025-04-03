@@ -6,6 +6,15 @@
     <title>Book Details</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .page-enter-active, .page-leave-active {
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .page-enter-from, .page-leave-to {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
     <nav class="bg-white shadow-sm">
@@ -18,7 +27,7 @@
         </div>
     </nav>
 
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto px-4 py-8 page-enter-active">
         <div id="book-details" class="bg-white rounded-lg shadow-md p-6">
             <!-- Book details will be loaded here -->
         </div>

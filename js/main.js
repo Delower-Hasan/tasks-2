@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function fetchBooks(url) {
         try {
+            // Show loader
+            document.getElementById('loader').classList.remove('hidden');
+            
             const response = await fetch(url);
             const data = await response.json();
             
@@ -57,22 +60,19 @@ document.addEventListener('DOMContentLoaded', function() {
             nextApiUrl = data.next;
             prevApiUrl = data.previous;
             
-            // Update pagination
             updatePaginationControls();
-            
-            // Extract all unique genres
             extractGenres(allBooks);
-            
-            // Initialize filtered books
             filteredBooks = [...allBooks];
             currentBooks = [...filteredBooks];
             
-            // Render books and genre filter
             renderBooks();
             renderGenreFilter();
         } catch (error) {
             console.error('Error fetching books:', error);
-            booksContainer.innerHTML = '<p class="error">Failed to load books. Please try again later.</p>';
+            booksContainer.innerHTML = '<p class="text-red-500 text-center py-8">Failed to load books. Please try again later.</p>';
+        } finally {
+            // Hide loader
+            document.getElementById('loader').classList.add('hidden');
         }
     }
 
@@ -139,8 +139,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createBookCard(book) {
-        const card = document.createElement('div');
-        card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300';
+            const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1'
         
         // Get cover image
         const coverId = book.formats['image/jpeg'] || 
@@ -167,25 +167,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const isInWishlist = wishlist.some(item => item.id === book.id);
         
         card.innerHTML = `
+        <div class="w-full h-64 bg-gray-200 animate-pulse relative">
             <img src="${coverUrl}" alt="${book.title}" 
-                class="w-full h-64 object-cover" 
-                onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover'">
-            <div class="p-4">
-                <h3 class="text-lg font-semibold mb-2 line-clamp-2">${book.title}</h3>
-                <p class="text-gray-600 text-sm mb-2">${authorName}</p>
-                <div class="flex flex-wrap gap-2 mb-3">
-                    ${genres.map(genre => `
-                        <span class="bg-gray-100 px-2 py-1 text-xs rounded">${genre}</span>
-                    `).join('')}
-                </div>
-                <div class="flex justify-between items-center">
-                    <a href="book.html?id=${book.id}" class="text-indigo-600 text-sm hover:underline">View Details</a>
-                    <button class="wishlist-btn ${isInWishlist ? 'text-red-500' : 'text-gray-400'}" data-id="${book.id}">
-                        <i class="fas fa-heart"></i>
-                    </button>
-                </div>
+                class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                onload="this.classList.remove('opacity-0')"
+                onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover';this.classList.remove('opacity-0')">
+        </div>
+        <div class="p-4">
+            <h3 class="text-lg font-semibold mb-2 line-clamp-2">${book.title}</h3>
+            <p class="text-gray-600 text-sm mb-2">${authorName}</p>
+            <div class="flex flex-wrap gap-2 mb-3">
+                ${genres.map(genre => `
+                    <span class="bg-gray-100 px-2 py-1 text-xs rounded">${genre}</span>
+                `).join('')}
             </div>
-        `;
+            <div class="flex justify-between items-center">
+                <a href="book.html?id=${book.id}" class="text-indigo-600 text-sm hover:underline">View Details</a>
+                <button class="wishlist-btn ${isInWishlist ? 'text-red-500' : 'text-gray-400'} hover:scale-110 transition-transform duration-200" data-id="${book.id}">
+                    <i class="fas fa-heart"></i>
+                </button>
+            </div>
+        </div>
+    `;
         
         // Add event listener to wishlist button
         const wishlistBtn = card.querySelector('.wishlist-btn');
@@ -202,22 +205,63 @@ document.addEventListener('DOMContentLoaded', function() {
         let wishlist = getWishlist();
         const bookIndex = wishlist.findIndex(item => item.id === book.id);
         
+        const wishlistBtn = document.querySelector(`.wishlist-btn[data-id="${book.id}"]`);
+        const notification = document.getElementById('notification');
+        
         if (bookIndex === -1) {
             // Add to wishlist
-            const bookToAdd = {
-                id: book.id,
-                title: book.title,
-                author: book.authors && book.authors.length > 0 ? book.authors[0].name : 'Unknown Author',
-                cover: book.formats['image/jpeg'] || `https://covers.openlibrary.org/b/id/${book.id}-M.jpg`,
-                genres: book.subjects ? book.subjects.slice(0, 2).map(subject => subject.split(' -- ')[0]) : []
-            };
-            wishlist.push(bookToAdd);
+            wishlistBtn.innerHTML = '<i class="fas fa-heart animate-ping"></i>';
+            
+            setTimeout(() => {
+                const bookToAdd = {
+                    id: book.id,
+                    title: book.title,
+                    author: book.authors && book.authors.length > 0 ? book.authors[0].name : 'Unknown Author',
+                    cover: book.formats['image/jpeg'] || `https://covers.openlibrary.org/b/id/${book.id}-M.jpg`,
+                    genres: book.subjects ? book.subjects.slice(0, 2).map(subject => subject.split(' -- ')[0]) : []
+                };
+                wishlist.push(bookToAdd);
+                localStorage.setItem('wishlist', JSON.stringify(wishlist));
+                
+                wishlistBtn.innerHTML = '<i class="fas fa-heart"></i>';
+                wishlistBtn.classList.add('text-red-500');
+                wishlistBtn.classList.remove('text-gray-400');
+                
+                // Show notification
+                notification.textContent = 'Book added to wishlist!';
+                notification.classList.remove('bg-red-500', 'hidden');
+                notification.classList.add('bg-green-500');
+                notification.classList.remove('translate-y-10', 'opacity-0');
+                
+                setTimeout(() => {
+                    notification.classList.add('translate-y-10', 'opacity-0');
+                    setTimeout(() => notification.classList.add('hidden'), 300);
+                }, 2000);
+            }, 500);
         } else {
             // Remove from wishlist
-            wishlist.splice(bookIndex, 1);
+            wishlistBtn.classList.add('animate-pulse');
+            
+            setTimeout(() => {
+                wishlist.splice(bookIndex, 1);
+                localStorage.setItem('wishlist', JSON.stringify(wishlist));
+                
+                wishlistBtn.classList.remove('animate-pulse');
+                wishlistBtn.classList.remove('text-red-500');
+                wishlistBtn.classList.add('text-gray-400');
+                
+                // Show notification
+                notification.textContent = 'Book removed from wishlist!';
+                notification.classList.remove('bg-green-500', 'hidden');
+                notification.classList.add('bg-red-500');
+                notification.classList.remove('translate-y-10', 'opacity-0');
+                
+                setTimeout(() => {
+                    notification.classList.add('translate-y-10', 'opacity-0');
+                    setTimeout(() => notification.classList.add('hidden'), 300);
+                }, 2000);
+            }, 300);
         }
-        
-        localStorage.setItem('wishlist', JSON.stringify(wishlist));
     }
 
     function getWishlist() {
