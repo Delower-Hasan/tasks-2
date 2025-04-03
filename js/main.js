@@ -140,9 +140,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function createBookCard(book) {
         const card = document.createElement('div');
-        card.className = 'book-card';
+        card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300';
         
-        // Get cover image (use medium cover if available, otherwise default)
+        // Get cover image
         const coverId = book.formats['image/jpeg'] || 
                        book.formats['image/png'] || 
                        Object.values(book.formats).find(format => format.includes('.jpg') || '.png');
@@ -167,17 +167,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const isInWishlist = wishlist.some(item => item.id === book.id);
         
         card.innerHTML = `
-            <img src="${coverUrl}" alt="${book.title}" class="book-cover" onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover'">
-            <div class="book-info">
-                <h3 class="book-title">${book.title}</h3>
-                <p class="book-author">${authorName}</p>
-                <div class="book-genres">
-                    ${genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+            <img src="${coverUrl}" alt="${book.title}" 
+                class="w-full h-64 object-cover" 
+                onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover'">
+            <div class="p-4">
+                <h3 class="text-lg font-semibold mb-2 line-clamp-2">${book.title}</h3>
+                <p class="text-gray-600 text-sm mb-2">${authorName}</p>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    ${genres.map(genre => `
+                        <span class="bg-gray-100 px-2 py-1 text-xs rounded">${genre}</span>
+                    `).join('')}
                 </div>
-                <div class="book-actions">
-                    <a href="book.html?id=${book.id}" class="book-link">View Details</a>
-                    <button class="wishlist-btn ${isInWishlist ? 'active' : ''}" data-id="${book.id}">
-                        ${isInWishlist ? '❤️' : '🤍'}
+                <div class="flex justify-between items-center">
+                    <a href="book.html?id=${book.id}" class="text-indigo-600 text-sm hover:underline">View Details</a>
+                    <button class="wishlist-btn ${isInWishlist ? 'text-red-500' : 'text-gray-400'}" data-id="${book.id}">
+                        <i class="fas fa-heart"></i>
                     </button>
                 </div>
             </div>
@@ -187,8 +191,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const wishlistBtn = card.querySelector('.wishlist-btn');
         wishlistBtn.addEventListener('click', function() {
             toggleWishlist(book);
-            this.classList.toggle('active');
-            this.innerHTML = this.classList.contains('active') ? '❤️' : '🤍';
+            this.classList.toggle('text-red-500');
+            this.classList.toggle('text-gray-400');
         });
         
         return card;
@@ -249,63 +253,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function createBookCard(book) {
-        const card = document.createElement('div');
-        card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300';
-        
-        // Get cover image
-        const coverId = book.formats['image/jpeg'] || 
-                       book.formats['image/png'] || 
-                       Object.values(book.formats).find(format => format.includes('.jpg') || '.png');
-        let coverUrl = `https://covers.openlibrary.org/b/id/${book.id}-M.jpg`;
-        
-        if (coverId) {
-            coverUrl = coverId;
-        }
-        
-        // Get first author name
-        const authorName = book.authors && book.authors.length > 0 
-            ? book.authors[0].name 
-            : 'Unknown Author';
-        
-        // Get first 2 genres
-        const genres = book.subjects ? book.subjects.slice(0, 2).map(subject => {
-            return subject.split(' -- ')[0];
-        }) : ['No genres listed'];
-        
-        // Check if book is in wishlist
-        const wishlist = getWishlist();
-        const isInWishlist = wishlist.some(item => item.id === book.id);
-        
-        card.innerHTML = `
-            <img src="${coverUrl}" alt="${book.title}" 
-                class="w-full h-64 object-cover" 
-                onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover'">
-            <div class="p-4">
-                <h3 class="text-lg font-semibold mb-2 line-clamp-2">${book.title}</h3>
-                <p class="text-gray-600 text-sm mb-2">${authorName}</p>
-                <div class="flex flex-wrap gap-2 mb-3">
-                    ${genres.map(genre => `
-                        <span class="bg-gray-100 px-2 py-1 text-xs rounded">${genre}</span>
-                    `).join('')}
-                </div>
-                <div class="flex justify-between items-center">
-                    <a href="book.html?id=${book.id}" class="text-indigo-600 text-sm hover:underline">View Details</a>
-                    <button class="wishlist-btn ${isInWishlist ? 'text-red-500' : 'text-gray-400'}" data-id="${book.id}">
-                        <i class="fas fa-heart"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Add event listener to wishlist button
-        const wishlistBtn = card.querySelector('.wishlist-btn');
-        wishlistBtn.addEventListener('click', function() {
-            toggleWishlist(book);
-            this.classList.toggle('text-red-500');
-            this.classList.toggle('text-gray-400');
-        });
-        
-        return card;
-    }
+   
 });
