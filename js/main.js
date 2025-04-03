@@ -21,37 +21,103 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentApiUrl = 'https://gutendex.com/books/';
     let nextApiUrl = '';
     let prevApiUrl = '';
+    const STORAGE_KEY = 'gutendex_preferences';
 
+function savePreferences() {
+    const preferences = {
+        searchTerm: searchInput.value,
+        selectedGenre: genreFilter.value,
+        currentPage: currentPage,
+        currentApiUrl: currentApiUrl
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+}
+
+// function loadPreferences() {
+//     const saved = localStorage.getItem(STORAGE_KEY);
+//     if (saved) {
+//         const preferences = JSON.parse(saved);
+//         searchInput.value = preferences.searchTerm || '';
+//         genreFilter.value = preferences.selectedGenre || '';
+//         currentPage = preferences.currentPage || 1;
+//         currentApiUrl = preferences.currentApiUrl || 'https://gutendex.com/books/';
+//         return true;
+//     }
+//     return false;
+// }
+function loadPreferences() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+        const preferences = JSON.parse(saved);
+        searchInput.value = preferences.searchTerm || '';
+        currentPage = preferences.currentPage || 1;
+        currentApiUrl = preferences.currentApiUrl || 'https://gutendex.com/books/';
+        return preferences.selectedGenre || ''; // Return the saved genre
+    }
+    return '';
+}
+
+async function init() {
+    const savedGenre = loadPreferences(); // Get saved genre but don't apply yet
+    await fetchBooks(currentApiUrl || 'https://gutendex.com/books/');
+    
+    // After books are fetched and genres are populated
+    if (savedGenre) {
+        genreFilter.value = savedGenre;
+        filterBooks();
+        renderBooks();
+    }
+    
+    setupEventListeners();
+}
     // Initialize the app
     init();
 
     function init() {
-        fetchBooks(currentApiUrl);
+        const hasPreferences = loadPreferences();
+        fetchBooks(hasPreferences ? currentApiUrl : 'https://gutendex.com/books/');
         setupEventListeners();
     }
+    
 
     function setupEventListeners() {
-        // Search input event
         searchInput.addEventListener('input', function() {
             filterBooks();
             renderBooks();
+            savePreferences();
         });
-
-        // Genre filter event
+    
         genreFilter.addEventListener('change', function() {
             filterBooks();
             renderBooks();
+            savePreferences();
         });
+    
+        prevPageBtn.addEventListener('click', function() {
+            goToPrevPage();
+            savePreferences();
+        });
+    
+        nextPageBtn.addEventListener('click', function() {
+            goToNextPage();
+            savePreferences();
+        });
+        document.getElementById('clear-preferences').addEventListener('click', clearPreferences);
+    }
 
-        // Pagination events
-        prevPageBtn.addEventListener('click', goToPrevPage);
-        nextPageBtn.addEventListener('click', goToNextPage);
+    function clearPreferences() {
+        localStorage.removeItem(STORAGE_KEY);
+        searchInput.value = '';
+        genreFilter.value = '';
+        currentPage = 1;
+        currentApiUrl = 'https://gutendex.com/books/';
+        fetchBooks(currentApiUrl);
     }
 
     async function fetchBooks(url) {
         try {
-            // Show loader
             document.getElementById('loader').classList.remove('hidden');
+            currentApiUrl = url;
             
             const response = await fetch(url);
             const data = await response.json();
@@ -61,7 +127,7 @@ document.addEventListener('DOMContentLoaded', function() {
             prevApiUrl = data.previous;
             
             updatePaginationControls();
-            extractGenres(allBooks);
+            extractGenres(allBooks); // This populates the genre filter
             filteredBooks = [...allBooks];
             currentBooks = [...filteredBooks];
             
@@ -71,11 +137,9 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error fetching books:', error);
             booksContainer.innerHTML = '<p class="text-red-500 text-center py-8">Failed to load books. Please try again later.</p>';
         } finally {
-            // Hide loader
             document.getElementById('loader').classList.add('hidden');
         }
     }
-
     function extractGenres(books) {
         allGenres.clear();
         books.forEach(book => {
@@ -90,6 +154,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderGenreFilter() {
+        // Get saved genre from preferences
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const savedGenre = saved ? JSON.parse(saved).selectedGenre : '';
+        
         genreFilter.innerHTML = '<option value="">All Genres</option>';
         
         const sortedGenres = Array.from(allGenres).sort();
@@ -97,8 +165,22 @@ document.addEventListener('DOMContentLoaded', function() {
             const option = document.createElement('option');
             option.value = genre;
             option.textContent = genre;
+            if (savedGenre && genre === savedGenre) {
+                option.selected = true;
+            }
             genreFilter.appendChild(option);
         });
+    
+        
+        // If we have a saved genre that doesn't exist in current results, add it
+        if (savedGenre && !sortedGenres.includes(savedGenre)) {
+            const option = document.createElement('option');
+            option.value = savedGenre;
+            option.textContent = savedGenre;
+            option.selected = true;
+            genreFilter.appendChild(option);
+        }
+    
     }
 
     function filterBooks() {
@@ -139,8 +221,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function createBookCard(book) {
-            const card = document.createElement('div');
-    card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1'
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1';
+
+        // Get saved preferences
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const preferences = saved ? JSON.parse(saved) : {};
+        const searchTerm = preferences.searchTerm || '';
+        const selectedGenre = preferences.selectedGenre || '';
+
+
+        // Highlight if matches current search
+    const highlightTitle = searchTerm && book.title.toLowerCase().includes(searchTerm.toLowerCase());
+    // Highlight if matches current genre filter
+    const highlightGenre = selectedGenre && book.subjects && book.subjects.some(subject => {
+        const genre = subject.split(' -- ')[0];
+        return genre === selectedGenre;
+    });
+
+    
+   
         
         // Get cover image
         const coverId = book.formats['image/jpeg'] || 
@@ -161,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const genres = book.subjects ? book.subjects.slice(0, 2).map(subject => {
             return subject.split(' -- ')[0];
         }) : ['No genres listed'];
-        
+       
         // Check if book is in wishlist
         const wishlist = getWishlist();
         const isInWishlist = wishlist.some(item => item.id === book.id);
@@ -174,11 +274,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 onerror="this.src='https://via.placeholder.com/150x200?text=No+Cover';this.classList.remove('opacity-0')">
         </div>
         <div class="p-4">
-            <h3 class="text-lg font-semibold mb-2 line-clamp-2">${book.title}</h3>
+            <h3 class="text-lg font-semibold mb-2 line-clamp-2 ${highlightTitle ? 'bg-yellow-100 px-1' : ''}">${book.title}</h3>
             <p class="text-gray-600 text-sm mb-2">${authorName}</p>
             <div class="flex flex-wrap gap-2 mb-3">
                 ${genres.map(genre => `
-                    <span class="bg-gray-100 px-2 py-1 text-xs rounded">${genre}</span>
+                    <span class="bg-gray-100 px-2 py-1 text-xs rounded ${highlightGenre && genres.includes(selectedGenre) ? 'bg-yellow-200 border border-indigo-300' : ''}">${genre}</span>
                 `).join('')}
             </div>
             <div class="flex justify-between items-center">
@@ -269,19 +369,30 @@ document.addEventListener('DOMContentLoaded', function() {
         return wishlistJson ? JSON.parse(wishlistJson) : [];
     }
 
-    function updatePaginationControls() {
-        prevPageBtn.disabled = !prevApiUrl;
-        nextPageBtn.disabled = !nextApiUrl;
-        
-        // Simple pagination - in a real app you might want more sophisticated logic
-        pageNumbersContainer.innerHTML = '';
-        
-        // Just show current page for now
-        const pageNumber = document.createElement('span');
-        pageNumber.className = 'page-number active';
-        pageNumber.textContent = currentPage;
+ 
+function updatePaginationControls() {
+    prevPageBtn.disabled = !prevApiUrl;
+    nextPageBtn.disabled = !nextApiUrl;
+    
+    // Clear existing page numbers
+    pageNumbersContainer.innerHTML = '';
+    
+    // Calculate page range to display (simplified version)
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(startPage + 4, currentPage + 2);
+    
+    // Add page numbers
+    for (let i = startPage; i <= endPage; i++) {
+        const pageNumber = document.createElement('button');
+        pageNumber.className = `px-3 py-1 rounded ${i === currentPage ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-300'}`;
+        pageNumber.textContent = i;
+        pageNumber.addEventListener('click', () => {
+            currentPage = i;
+            savePreferences();
+        });
         pageNumbersContainer.appendChild(pageNumber);
     }
+}
 
     function goToPrevPage() {
         if (prevApiUrl) {
@@ -289,7 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchBooks(prevApiUrl);
         }
     }
-
+    
     function goToNextPage() {
         if (nextApiUrl) {
             currentPage++;
