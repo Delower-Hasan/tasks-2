@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Wishlist</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold text-indigo-600">Gutendex Books</a>
+            <div class="flex space-x-6">
+                <a href="index.html" class="text-gray-600 hover:text-indigo-600 font-medium">Home</a>
+                <a href="wishlist.html" class="text-gray-600 hover:text-indigo-600 font-medium">Wishlist</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-8">My Wishlist</h1>
+        
+        <div id="wishlist-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Wishlisted books will be loaded here -->
+        </div>
+        
+        <p id="empty-wishlist" class="text-center text-gray-500 py-12 hidden">
+            Your wishlist is empty. Go to the <a href="index.html" class="text-indigo-600 hover:underline">homepage</a> to add some books!
+        </p>
+    </main>
+
+    <script src="js/wishlist.js"></script>
+</body>
+</html>
